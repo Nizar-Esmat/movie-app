@@ -1,24 +1,23 @@
 import React from 'react';
 import api from '../components/api';
-import { Card, Col, Row, Spinner } from 'react-bootstrap';
+import { Row, Spinner, Form, Button, InputGroup } from 'react-bootstrap';
 import Cart from '../components/cart';
 
 export default function Movie_list() {
-  let [movies, setMovies] = React.useState([]);
-  let [loading, setLoading] = React.useState(true);
-  let [curentPage, setCurrentPage] = React.useState(1);
-  let [totalPages, setTotalPages] = React.useState(0);
+  const [movies, setMovies] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [curentPage, setCurrentPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(0);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [isSearchMode, setIsSearchMode] = React.useState(false);
 
-  let handlePageChange = (page) => {
-    setCurrentPage(page);
-    setLoading(true); 
-  };
-
-  React.useEffect(() => {
+  const fetchMovies = (query = '', page = curentPage) => {
+    const endpoint = query ? 'search/movie' : 'movie/popular';
     api
-      .get('movie/popular', {
+      .get(endpoint, {
         params: {
-          page: curentPage,
+          query,
+          page,
         },
       })
       .then((res) => {
@@ -27,16 +26,36 @@ export default function Movie_list() {
         setLoading(false);
       })
       .catch((err) => {
-        console.log('Error fetching movies:', err);
-        setLoading(false); 
+        console.error('Error fetching movies:', err);
+        setLoading(false);
       });
-  }, [curentPage]); 
+  };
+
+  React.useEffect(() => {
+    fetchMovies(isSearchMode ? searchQuery : '', curentPage);
+  }, [curentPage, isSearchMode]);
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return; 
+    setCurrentPage(1); 
+    setIsSearchMode(true); 
+    setLoading(true);
+    fetchMovies(searchQuery, 1);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery(''); 
+    setIsSearchMode(false); 
+    setCurrentPage(1); 
+    setLoading(true);
+    fetchMovies('', 1); 
+  };
 
   const getPageRange = () => {
-    let maxVisiblePages = 5; 
+    const maxVisiblePages = 5;
     let startPage = Math.max(1, curentPage - Math.floor(maxVisiblePages / 2));
-    let  endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
     if (endPage - startPage < maxVisiblePages - 1) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
@@ -44,11 +63,28 @@ export default function Movie_list() {
     return { startPage, endPage };
   };
 
-  let { startPage, endPage } = getPageRange();
+  const { startPage, endPage } = getPageRange();
 
   return (
-    <div className='d-flex flex-column justify-content-center align-items-center g-4'>
-      <h2>Popular Movies</h2>
+    <div className="d-flex flex-column justify-content-center align-items-center g-4">
+      <h2>{isSearchMode ? `Search Results for "${searchQuery}"` : 'Popular Movies'}</h2>
+
+      <InputGroup className="mb-4" style={{ maxWidth: '600px' }}>
+        <Form.Control
+          type="text"
+          placeholder="Search for movies..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <Button variant="primary" onClick={handleSearch}>
+          Search
+        </Button>
+        {isSearchMode && (
+          <Button variant="secondary" onClick={handleClearSearch}>
+            Clear
+          </Button>
+        )}
+      </InputGroup>
 
       {loading ? (
         <div className="d-flex justify-content-center">
@@ -56,30 +92,36 @@ export default function Movie_list() {
         </div>
       ) : (
         <Row xs={1} sm={2} md={3} lg={4} className="g-4">
-          {movies.map((movie) => (
-            <Cart key={movie.id} movie={movie} />
-          ))}
+          {movies.length > 0 ? (
+            movies.map((movie) => <Cart key={movie.id} movie={movie} />)
+          ) : (
+            <h5>No movies found.</h5>
+          )}
         </Row>
       )}
 
-      <nav aria-label="...">
-        <ul className="pagination pagination-lg">
-          {[...Array(endPage - startPage + 1)].map((bage, index) => (
-            <li
-              key={index}
-              className={`page-item ${curentPage === startPage + index ? 'active' : ''}`}
-            >
-              <a
-                className="page-link"
-                href="#"
-                onClick={() => handlePageChange(startPage + index)}
+      {!loading && totalPages > 1 && (
+        <nav aria-label="Pagination">
+          <ul className="pagination pagination-lg">
+            {[...Array(endPage - startPage + 1)].map((_, index) => (
+              <li
+                key={index}
+                className={`page-item ${
+                  curentPage === startPage + index ? 'active' : ''
+                }`}
               >
-                {startPage + index}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+                <a
+                  className="page-link"
+                  href="#"
+                  onClick={() => setCurrentPage(startPage + index)}
+                >
+                  {startPage + index}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </div>
   );
 }
