@@ -6,54 +6,55 @@ import Cart from '../components/cart';
 export default function Movie_list() {
   const [movies, setMovies] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
-  const [curentPage, setCurrentPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(0);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSearchMode, setIsSearchMode] = React.useState(false);
 
-  const fetchMovies = (query = '', page = curentPage) => {
+  const fetchMovies = (query = '', page = currentPage) => {
     const endpoint = query ? 'search/movie' : 'movie/popular';
     api
       .get(endpoint, {
-        params: {
-          query,
-          page,
-        },
+        params: { query, page },
       })
       .then((res) => {
-        setMovies(res.data.results);
-        setTotalPages(res.data.total_pages);
+        setMovies(res.data.results || []);
+        setTotalPages(res.data.total_pages || 0);
         setLoading(false);
       })
       .catch((err) => {
         console.error('Error fetching movies:', err);
+        setMovies([]);
         setLoading(false);
       });
   };
 
   React.useEffect(() => {
-    fetchMovies(isSearchMode ? searchQuery : '', curentPage);
-  }, [curentPage, isSearchMode]);
+    fetchMovies(isSearchMode ? searchQuery : '', currentPage);
+  }, [currentPage, isSearchMode]);
 
   const handleSearch = () => {
-    if (!searchQuery.trim()) return; 
-    setCurrentPage(1); 
-    setIsSearchMode(true); 
+    if (!searchQuery.trim()) {
+      alert('Please enter a valid search query.');
+      return;
+    }
+    setCurrentPage(1);
+    setIsSearchMode(true);
     setLoading(true);
     fetchMovies(searchQuery, 1);
   };
 
   const handleClearSearch = () => {
-    setSearchQuery(''); 
-    setIsSearchMode(false); 
-    setCurrentPage(1); 
+    setSearchQuery('');
+    setIsSearchMode(false);
+    setCurrentPage(1);
     setLoading(true);
-    fetchMovies('', 1); 
+    fetchMovies('', 1);
   };
 
   const getPageRange = () => {
     const maxVisiblePages = 5;
-    let startPage = Math.max(1, curentPage - Math.floor(maxVisiblePages / 2));
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 
     if (endPage - startPage < maxVisiblePages - 1) {
@@ -92,10 +93,10 @@ export default function Movie_list() {
         </div>
       ) : (
         <Row xs={1} sm={2} md={3} lg={4} className="g-4">
-          {movies.length > 0 ? (
+          {Array.isArray(movies) && movies.length > 0 ? (
             movies.map((movie) => <Cart key={movie.id} movie={movie} />)
           ) : (
-            <h5>No movies found.</h5>
+            <p>No movies found.</p>
           )}
         </Row>
       )}
@@ -107,16 +108,15 @@ export default function Movie_list() {
               <li
                 key={index}
                 className={`page-item ${
-                  curentPage === startPage + index ? 'active' : ''
+                  currentPage === startPage + index ? 'active' : ''
                 }`}
               >
-                <a
+                <button
                   className="page-link"
-                  href="#"
                   onClick={() => setCurrentPage(startPage + index)}
                 >
                   {startPage + index}
-                </a>
+                </button>
               </li>
             ))}
           </ul>
