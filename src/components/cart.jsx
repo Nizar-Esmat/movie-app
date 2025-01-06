@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, Col, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { addFavorite, removeFavorite } from '../store/favoritesSlice';
 
 export default function Cart({ movie }) {
-  let navigate = useNavigate();
-  const [isLiked, setIsLiked] = useState(false); 
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const favorites = useSelector((state) => state.favorites.favorites);
+
+  const isLiked = favorites.some((favMovie) => favMovie.id === movie.id);
+
   const handleNavigate = () => {
     navigate(`/movieDetails/${movie.id}`);
   };
 
   const toggleLike = (event) => {
-    event.stopPropagation(); 
-    setIsLiked(!isLiked); 
+    event.stopPropagation();
+    if (isLiked) {
+      dispatch(removeFavorite(movie.id)); 
+    } else {
+      dispatch(addFavorite(movie));
+    }
   };
 
   return (
@@ -45,7 +56,6 @@ export default function Cart({ movie }) {
               pill
               bg="dark"
               className="text-white py-2 px-3"
-            
             >
               {movie.vote_average}
             </Badge>
@@ -56,8 +66,6 @@ export default function Cart({ movie }) {
           </div>
         </Card.Body>
       </Card>
-
-
     </Col>
   );
 }
